@@ -1,0 +1,15 @@
+workloads:
+  chat:
+    input_tokens: 256
+    output_tokens: 256
+  rag:
+    input_tokens: 4096
+    output_tokens: 128
+  coding:
+    shared_prefix_tokens: 2048
+    input_tokens: 256       # the unique question
+    output_tokens: 256
+
+load:
+   concurrency: [1, 4, 16, 32, 64, 128, 256]
+   request_rate: [2, 4, 8, 16, 32]    # requests per second
