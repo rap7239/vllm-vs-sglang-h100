@@ -28,3 +28,43 @@ models:
 images:
   vllm: vllm/vllm-openai:v0.31.0
   sglang: lmsysorg/sglang:v0.5.22
+
+blocks:
+  core:
+    gpus: 1
+    frameworks: [vllm, sglang]
+    models: [llama8b-bf16]
+    tp: [1]
+    workloads: [chat, rag, coding]
+  precision:
+    gpus: 1
+    frameworks: [vllm, sglang]
+    models: [llama8b-fp8]
+    tp: [1]
+    workloads: [chat, rag]
+  prefix_off:
+    gpus: 1
+    frameworks: [vllm, sglang]
+    models: [llama8b-bf16]
+    tp: [1]
+    prefix_cache: [false]
+    workloads: [coding]
+  tp8b:
+    gpus: 2
+    frameworks: [vllm, sglang]
+    models: [llama8b-bf16]
+    tp: [2]
+    workloads: [chat]
+  tp70b:
+    gpus: 4
+    frameworks: [vllm, sglang]
+    models: [llama70b-fp8]
+    tp: [2, 4]
+    workloads: [chat]
+
+budget:
+  usd_per_gpu_hour: 3.29
+  cap_usd: 250
+  estimate:
+    server_start_min: 6
+    point_min: 2
