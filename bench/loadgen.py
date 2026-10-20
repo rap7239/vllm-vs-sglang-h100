@@ -1,10 +1,11 @@
+import asyncio
 import json
 import time
 
 import httpx
 
 
-def one_request(base_url, api_key, model, prompt, max_tokens):
+async def one_request(client, base_url, api_key, model, prompt, max_tokens):
     """Send one streaming chat request and time every token."""
     payload = {
         "model": model,
@@ -21,10 +22,10 @@ def one_request(base_url, api_key, model, prompt, max_tokens):
     usage = None
     start = time.perf_counter()     #a stopwatch clock, not the time of day
 
-    with httpx.stream("POST", f"{base_url}/v1/chat/completions",
+    async with client.stream("POST", f"{base_url}/v1/chat/completions",
                       json=payload, headers=headers, timeout=300) as resp:
         resp.raise_for_status()
-        for line in resp.iter_lines():
+        async for line in resp.aiter_lines():
             if not line.startswith("data:"):
                 continue            #skip blank keep-alive lines
             data = line[5:].strip()
@@ -50,3 +51,16 @@ def one_request(base_url, api_key, model, prompt, max_tokens):
         "output_tokens": usage["completion_tokens"] if usage else None,
     }
 
+
+async def run_concurrency(client, base_url, api_key, model, prompts, max_tokens, concurrency):
+    """Kepp 'concurrency' requests in flight until every prompt has been answered."""
+    sem = asyncio.Semaphore(concurrency)
+
+    async def limited(prompt):
+        async with sem:
+            return await one_request(client, base_url, api_key, model, prompt, max_tokens)
+
+    start = time.perf_counter()
+    results = await asyncio.gather(*(limited(p) for p in prompts))
+    wall_s = time.perf_counter() - start
+    return results, wall_s
