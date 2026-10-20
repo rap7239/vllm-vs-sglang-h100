@@ -63,8 +63,8 @@ blocks:
     workloads: [chat]
 
 budget:
-  usd_per_gpu_hour: 3.29
-  cap_usd: 250
+  usd_per_gpu_hour: 3.29    # Lambda price for one H100
+  cap_usd: 250              # the most we're willing to spend
   estimate:
-    server_start_min: 6
-    point_min: 2
+    server_start_min: 6     # start the server and load the model
+    point_min: 2            # warm up and measure one load point

@@ -51,9 +51,13 @@ async def one_request(client, base_url, api_key, model, prompt, max_tokens):
         "output_tokens": usage["completion_tokens"] if usage else None,
     }
 
+def make_client():
+    """An httpx client with no connection cap, so only our own load settings limit requests in flight."""
+    limits = httpx.Limits(max_connections=None, max_keepalive_connections=None)
+    return httpx.AsyncClient(limits=limits)
 
 async def run_concurrency(client, base_url, api_key, model, prompts, max_tokens, concurrency):
-    """Kepp 'concurrency' requests in flight until every prompt has been answered."""
+    """Keep 'concurrency' requests in flight until every prompt has been answered."""
     sem = asyncio.Semaphore(concurrency)
 
     async def limited(prompt):
