@@ -1,5 +1,7 @@
 import asyncio
+import itertools
 import json
+import random
 import time
 
 import httpx
@@ -66,5 +68,20 @@ async def run_concurrency(client, base_url, api_key, model, prompts, max_tokens,
 
     start = time.perf_counter()
     results = await asyncio.gather(*(limited(p) for p in prompts))
+    wall_s = time.perf_counter() - start
+    return results, wall_s
+
+
+async def run_rate(client, base_url, api_key, model, prompts, max_tokens, rate, seed):
+    """Send prompts at random (Poisson) moments averaging `rate` per second, never waiting for replies."""
+    rng = random.Random(seed)
+    send_times = itertools.accumulate(rng.expovariate(rate) for _ in prompts)
+    tasks = []
+    start = time.perf_counter()
+    for prompt, send_at in zip(prompts, send_times):
+        await asyncio.sleep(max(0, start + send_at - time.perf_counter()))
+        tasks.append(asyncio.create_task(
+            one_request(client, base_url, api_key, model, prompt, max_tokens)))
+    results = await asyncio.gather(*tasks)
     wall_s = time.perf_counter() - start
     return results, wall_s
