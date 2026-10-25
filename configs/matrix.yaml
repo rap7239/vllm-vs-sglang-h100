@@ -68,3 +68,7 @@ budget:
   estimate:
     server_start_min: 6     # start the server and load the model
     point_min: 2            # warm up and measure one load point
+
+  worst_case:
+    server_start_min: 20    # cold 72.7 GB model download + load
+    point_min: 3            # high-concurrency and long-prompt points run long
