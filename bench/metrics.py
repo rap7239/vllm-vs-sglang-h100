@@ -15,7 +15,10 @@ def percentile(values: list[float], p: float) -> float | None:
 
 def summarize(results: list[dict], wall_s: float) -> dict:
     """Turn one load point's per-request results into percentiles and throughput."""
-    summary = {"requests": len(results), "wall_s": wall_s}
+    errors = [r["error"] for r in results if r["error"]]
+    summary = {"requests": len(results), "errors" : len(errors),
+               "first_error": errors[0] if errors else None, "wall_s": wall_s}
+    results = [r for r in results if not r["error"]]        #stats and throughtput from successes only
 
     series = {
         "ttft_ms": [r["ttft_ms"] for r in results if r["ttft_ms"] is not None],

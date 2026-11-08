@@ -24,27 +24,35 @@ async def one_request(client, base_url, api_key, model, prompt, max_tokens):
     usage = None
     start = time.perf_counter()     #a stopwatch clock, not the time of day
 
-    async with client.stream("POST", f"{base_url}/v1/chat/completions",
-                      json=payload, headers=headers, timeout=300) as resp:
-        resp.raise_for_status()
-        async for line in resp.aiter_lines():
-            if not line.startswith("data:"):
-                continue            #skip blank keep-alive lines
-            data = line[5:].strip()
-            if data == "[DONE]":
-                break
-            chunk = json.loads(data)
-            if chunk.get("usage"):
-                usage = chunk["usage"]
-            choices = chunk.get("choices") or []
-            if choices and choices[0].get("delta", {}).get("content"):
-                token_times.append(time.perf_counter())
+    try:
+        async with client.stream("POST", f"{base_url}/v1/chat/completions",
+                                 json=payload, headers=headers, timeout=300) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line.startswith("data:"):
+                    continue            #skip blank keep-alive lines
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                chunk = json.loads(data)
+                if chunk.get("usage"):
+                    usage = chunk["usage"]
+                choices = chunk.get("choices") or []
+                if choices and choices[0].get("delta", {}).get("content"):
+                    token_times.append(time.perf_counter())
+
+    except (httpx.HTTPError, json.JSONDecodeError) as e:
+        #Record the failure instead of raising, so one bad request doesnt sink the whole point.
+        return {"error": f"{type(e).__name__}: {e}", "ttft_ms": None, "itl_ms": [],
+                "e2e_ms": (time.perf_counter() - start) * 1000, "tpot_ms": None,
+                "input_tokens": None, "output_tokens": None}
 
     end = time.perf_counter()
     out = usage["completion_tokens"] if usage else None
     tpot_ms = (end - token_times[0]) * 1000 / (out - 1) if token_times and out and out > 1 else None
 
     return {
+        "error" : None,
         "ttft_ms": (token_times[0] - start) * 1000 if token_times else None,
         "itl_ms": [(b - a) * 1000 for a, b in zip(token_times, token_times[1:])],
         "e2e_ms": (end - start) * 1000,
